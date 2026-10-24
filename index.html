@@ -589,6 +589,10 @@ button.vars-h { width: 100%; border: 0; background: none; color: inherit; font: 
 #codeHelp { margin-top: 4px; }
 
 
+/* the logo is the home link */
+a.home{display:flex;align-items:center;flex:none;border-radius:8px}
+a.home:focus-visible{outline:2px solid var(--amber,#F2A33A);outline-offset:4px}
+
 /* pandas track: the index column, the kind line above a result, printed output and plain values. */
 .grid th.ix, .grid td.ix { font-weight: 600; color: var(--muted); background: var(--surface); }
 .kind { font-size: 12px; color: var(--muted); margin: 8px 0 4px; font-family: "JetBrains Mono", ui-monospace, monospace; }
@@ -620,7 +624,7 @@ button.vars-h { width: 100%; border: 0; background: none; color: inherit; font: 
 </svg>
 <header class="band" id="band">
   <div class="band-in wrap gx">
-    <img class="logo" src="assets/occulenz-horizontal-light.svg" alt="Occulenz">
+    <a class="home" id="homeLink" href="./" data-ta="home"><img class="logo" src="assets/occulenz-horizontal-light.svg" alt="Occulenz"></a>
     <span class="vr" id="bandVr" hidden></span>
     <span class="bt" id="bandTitle" hidden><b id="bandStage"></b><span id="who"></span></span>
     <span class="sp"></span>
@@ -5393,7 +5397,7 @@ const T = {
   en: {
     language: 'Language', theme: 'Colour theme', light: 'Light mode', dark: 'Dark mode', submit: 'Submit',
     eyebrow: 'Occulenz · pandas practice', heroTitle: '<span class="key">pandas</span> for Data Analysts',
-    factQueries: 'challenges', factPoints: 'points', minutes: 'minutes', noLimit: 'no time limit',
+    factQueries: 'challenges', factPoints: 'points', minutes: 'minutes', noLimit: 'no time limit', home: 'Home', leaveQuiz: 'Go to the home page? Your answers stay saved on this device, and the clock keeps running.',
     resume: 'Resume', discard: 'Discard', ready: 'Ready when you are', chooseStage: 'Stage', yourName: 'Your name', namePh: 'e.g. Sara Ahmed',
     timeLimit: 'Time limit', min: 'min', noTimer: 'no timer', start: 'Start',
     durNone: 'No countdown. Press Submit when you finish.', durTimed: 'Submitted automatically when the {v}-minute clock reaches 00:00. Suggested for this stage: {s}.',
@@ -5457,7 +5461,7 @@ const T = {
   ar: {
     language: 'اللغة', theme: 'الوضع الفاتح والغامق', light: 'فاتح', dark: 'غامق', submit: 'سلم',
     eyebrow: 'Occulenz · تدريب pandas', heroTitle: 'تدريب <span class="key">pandas</span><br>للـ Data Analyst',
-    factQueries: 'تحدي', factPoints: 'نقطة', minutes: 'دقيقة', noLimit: 'من غير وقت',
+    factQueries: 'تحدي', factPoints: 'نقطة', minutes: 'دقيقة', noLimit: 'من غير وقت', home: 'الرئيسية', leaveQuiz: 'تروح للصفحة الرئيسية؟ اجاباتك متسجلة على الجهاز ده، والعداد هيفضل شغال.',
     resume: 'كمل', discard: 'امسحه', ready: 'جاهز؟ يلا بينا', chooseStage: 'المرحلة', yourName: 'اسمك', namePh: 'مثلا سارة احمد',
     timeLimit: 'الوقت', min: 'دقيقة', noTimer: 'من غير وقت', start: 'ابدا',
     durNone: 'مفيش عداد. دوس سلم لما تخلص.', durTimed: 'بيتسلم لوحده لما عداد الـ {v} دقيقة يوصل 00:00. المقترح للمرحلة دي: {s}.',
@@ -6085,7 +6089,7 @@ function show(screen) {
   if (!quiz) { closePanel(); $('#notice').hidden = true; }
   window.scrollTo(0, 0);
 }
-function selectedStageId() { const r = document.querySelector('input[name="stage"]:checked'); return r ? r.value : STAGES[0].id; }
+function selectedStageId() { const r = document.querySelector('input[name="stage"]:checked'); return r ? r.value : STAGE.id; }
 function renderStagePick() {
   const cur = selectedStageId();
   $('#stagePick').innerHTML = STAGES.map((s) => `<input type="radio" name="stage" id="st-${s.id}" value="${s.id}"${s.id === cur ? ' checked' : ''}><label for="st-${s.id}"><span class="sp-no">${s.no}</span><span class="sp-t"><b>${esc(L(s.title))}</b><small>${esc(t('stageMeta', { q: s.questions.length, m: s.minutes }))}</small></span></label>`).join('');
@@ -6111,7 +6115,9 @@ function paintResume() {
     $('#discardBtn').onclick = () => { storeClear(STAGE.id); $('#resume').hidden = true; };
   } else $('#resume').hidden = true;
 }
+const LAST_KEY = 'occ-pandas:last';
 function initStart() {
+  try { const last = localStorage.getItem(LAST_KEY); if (last && STAGES.some((x) => x.id === last)) setStage(last); } catch (e) {}
   renderStagePick();
   $('#startForm').addEventListener('submit', (e) => { e.preventDefault(); startQuiz(); });
   document.querySelectorAll('input[name="dur"]').forEach((r) => r.addEventListener('change', updateDur));
@@ -6178,6 +6184,7 @@ function resume(saved) {
   enterQuiz();
 }
 function enterQuiz() {
+  try { localStorage.setItem(LAST_KEY, STAGE.id); } catch (e) {}
   show('board');
   $('#who').textContent = S.name; $('#bandStage').textContent = stageLabel();
   renderBoard(); tick(); storeSave();
@@ -6745,6 +6752,7 @@ try { savedLang = localStorage.getItem(LANG_KEY); } catch (e) {}
 LANG = savedLang === 'ar' ? 'ar' : 'en';
 document.documentElement.lang = LANG; document.documentElement.dir = LANG === 'ar' ? 'rtl' : 'ltr';
 applyStatic();
+$('#homeLink').addEventListener('click', (e) => { if (S.screen === 'board' && !S.submitted && !confirm(t('leaveQuiz'))) e.preventDefault(); });
 initStart();
 show('start');
 </script>
